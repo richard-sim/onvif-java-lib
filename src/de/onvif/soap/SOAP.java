@@ -9,6 +9,7 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.UnmarshalException;
 import javax.xml.bind.Unmarshaller;
+import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.soap.MessageFactory;
@@ -46,7 +47,10 @@ public class SOAP {
 	}
 
 	public Object createSOAPMediaRequest(Object soapRequestElem, Object soapResponseElem, boolean needsAuthentification) throws SOAPException, ConnectException {
-		return createSOAPRequest(soapRequestElem, soapResponseElem, onvifDevice.getMediaUri(), needsAuthentification);
+		return createSOAPRequest(soapRequestElem, soapResponseElem, onvifDevice.getMediaUri(), needsAuthentification, true);
+	}
+	public Object createSOAPMediaRequest(Object soapRequestElem, Object soapResponseElem, boolean needsAuthentification, boolean soap1_2) throws SOAPException, ConnectException {
+		return createSOAPRequest(soapRequestElem, soapResponseElem, onvifDevice.getMediaUri(), needsAuthentification, soap1_2);
 	}
 
 	public Object createSOAPImagingRequest(Object soapRequestElem, Object soapResponseElem, boolean needsAuthentification) throws SOAPException,
@@ -69,6 +73,19 @@ public class SOAP {
 	 */
 	public Object createSOAPRequest(Object soapRequestElem, Object soapResponseElem, String soapUri, boolean needsAuthentification) throws ConnectException,
 			SOAPException {
+		return createSOAPRequest(soapRequestElem, soapResponseElem, soapUri, needsAuthentification, true);
+	}
+	
+	/**
+	 * 
+	 * @param soapResponseElem
+	 *            Answer object for SOAP request
+	 * @return SOAP Response Element
+	 * @throws SOAPException
+	 * @throws ConnectException
+	 */
+	public Object createSOAPRequest(Object soapRequestElem, Object soapResponseElem, String soapUri, boolean needsAuthentification, boolean soap1_2) throws ConnectException,
+			SOAPException {
 		SOAPConnection soapConnection = null;
 		SOAPMessage soapResponse = null;
 
@@ -77,7 +94,7 @@ public class SOAP {
 			SOAPConnectionFactory soapConnectionFactory = SOAPConnectionFactory.newInstance();
 			soapConnection = soapConnectionFactory.createConnection();
 
-			SOAPMessage soapMessage = createSoapMessage(soapRequestElem, needsAuthentification);
+			SOAPMessage soapMessage = createSoapMessage(soapRequestElem, needsAuthentification, soap1_2);
 
 			// Print the request message
 			if (isLogging()) {
@@ -98,7 +115,7 @@ public class SOAP {
 			if (soapResponseElem == null) {
 				throw new NullPointerException("Improper SOAP Response Element given (is null).");
 			}
-
+			
 			Unmarshaller unmarshaller = JAXBContext.newInstance(soapResponseElem.getClass()).createUnmarshaller();
 			try {
 				try {
@@ -141,12 +158,19 @@ public class SOAP {
 		}
 	}
 
-	protected SOAPMessage createSoapMessage(Object soapRequestElem, boolean needAuthentification) throws SOAPException, ParserConfigurationException,
+	protected SOAPMessage createSoapMessage(Object soapRequestElem, boolean needAuthentification, boolean soap1_2) throws SOAPException, ParserConfigurationException,
 			JAXBException {
-		MessageFactory messageFactory = MessageFactory.newInstance(SOAPConstants.SOAP_1_2_PROTOCOL);
+		MessageFactory messageFactory = MessageFactory.newInstance((soap1_2) ? SOAPConstants.SOAP_1_2_PROTOCOL : SOAPConstants.SOAP_1_1_PROTOCOL);
 		SOAPMessage soapMessage = messageFactory.createMessage();
 
-		Document document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
+//		SOAPPart sp = soapMessage.getSOAPPart();
+//		SOAPEnvelope se = sp.getEnvelope();
+//		se.addNamespaceDeclaration("ns2", "http://www.onvif.org/ver10/media/wsdl");
+		
+		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+		dbf.setNamespaceAware(true);
+		DocumentBuilder db = dbf.newDocumentBuilder();
+		Document document = db.newDocument();
 		Marshaller marshaller = JAXBContext.newInstance(soapRequestElem.getClass()).createMarshaller();
 		marshaller.marshal(soapRequestElem, document);
 		soapMessage.getSOAPBody().addDocument(document);

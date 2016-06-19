@@ -176,7 +176,7 @@ public class MediaDevices {
 		request.setForcePersistence(true);
 
 		try {
-			response = (SetVideoEncoderConfigurationResponse) soap.createSOAPMediaRequest(request, response, true);
+			response = (SetVideoEncoderConfigurationResponse) soap.createSOAPMediaRequest(request, response, true, true);
 		}
 		catch (SOAPException | ConnectException e) {
 			throw e;
